@@ -52,6 +52,7 @@ This bot demonstrates many of the core features of Botkit:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 var env = require('node-env-file');
+var rp = require('request-promise');
 env(__dirname + '/.env');
 
 
@@ -62,14 +63,17 @@ if (!process.env.clientId || !process.env.clientSecret || !process.env.PORT) {
 
 var Botkit = require('botkit');
 var debug = require('debug')('botkit:main');
+var Message = require('./commons/constructMessage.js');
+var greetingKeywords = require('./commons/greetings.js');
+var keywords = require('./commons/keywords.js');
 
 var bot_options = {
     clientId: process.env.clientId,
     clientSecret: process.env.clientSecret,
-    // debug: true,
+    debug: true,
     scopes: ['bot'],
-    studio_token: process.env.studio_token,
-    studio_command_uri: process.env.studio_command_uri
+    // studio_token: process.env.studio_token,
+    // studio_command_uri: process.env.studio_command_uri
 };
 
 // Use a mongo database if specified, otherwise store in a JSON file local to the app.
@@ -159,6 +163,44 @@ if (!process.env.clientId || !process.env.clientSecret) {
               debug('Botkit Studio: ', err);
           });
       });
+    controller.hears(greetingKeywords,['message_received','direct_mention', 'mention', 'direct_message'],function(bot,message){
+      console.log("I am here");
+      bot.reply(message,message.text+' I am moviebot ,how can i help today? Type help to explore my skills');
+    });
+    controller.hears(keywords, ['message_received','direct_mention', 'mention', 'direct_message'], function (bot, message) {
+      const movieName = message.text.match('(?<=info|movie|rating).*$')[0].trim();
+      return rp('http://127.0.0.1:8000/api/movieDetails/' + movieName).then((msg) => {
+        const jsonResponse = JSON.parse(msg);
+        return bot.reply(message, `${Message.createMessage(jsonResponse)}`);
+
+      }).catch(() => {
+        bot.reply(message,'Well this is embarassing, we are summoming the software gods');
+      });
+    });
+    controller.hears(['help','onboard me'], ['message_received','direct_mention', 'mention', 'direct_message'], function(bot,message) {
+      // start a conversation to handle this response.
+      bot.startConversation(message,function(err,convo) {
+        convo.sayFirst(`Hello, i am moviebot &#128247;`);
+        convo.say({
+          text: 'I am ready to take your movie queries,Lets try some sample queries to get you warmed up',
+          quick_replies: [
+            {
+              title: 'tell me about the movie Dilwale',
+              payload: 'movie dilwale',
+            },
+            {
+              title: 'give me info about Shawshank Redemption',
+              payload: 'info Shawshank Redemption',
+            },
+            {
+              title: 'what is the rating Shutter Island',
+              payload: 'rating Shutter Island',
+            }
+          ]
+        });
+      });
+
+    });
   } else {
       console.log('~~~~~~~~~~');
       console.log('NOTE: Botkit Studio functionality has not been enabled');
