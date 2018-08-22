@@ -18,12 +18,12 @@ class MessageConstructor {
 
   createMessageForIMDB(responseObj) {
     if (responseObj["rating"] === "") {
-      return `I am sorry i am unable to find the movie rating on rotten tomatoes please go to 
+      return `I am sorry i am unable to find the movie rating on IMDB please go to 
       https://www.imdb.com/find?ref_=nv_sr_fn&q=${responseObj["title"]}&s=all`;
     }
     else {
-      return `*Rating:*</b>${responseObj["rating"]} \n\n\n <b> Cast:</b> ${responseObj["actors"]}  \n\n\n 
-<b>Plot:</b>${responseObj["summary"]}\n\n \n`
+      return `*Rating:* ${responseObj["rating"]} \n\n  *Cast:* ${responseObj["actors"]}  \n\n 
+*Plot:* ${responseObj["summary"]}\n\n`
     }
 
   }

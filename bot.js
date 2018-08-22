@@ -1,56 +1,4 @@
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-           ______     ______     ______   __  __     __     ______
-          /\  == \   /\  __ \   /\__  _\ /\ \/ /    /\ \   /\__  _\
-          \ \  __<   \ \ \/\ \  \/_/\ \/ \ \  _"-.  \ \ \  \/_/\ \/
-           \ \_____\  \ \_____\    \ \_\  \ \_\ \_\  \ \_\    \ \_\
-            \/_____/   \/_____/     \/_/   \/_/\/_/   \/_/     \/_/
 
-
-This is a sample Slack bot built with Botkit.
-
-This bot demonstrates many of the core features of Botkit:
-
-* Connect to Slack using the real time API
-* Receive messages based on "spoken" patterns
-* Reply to messages
-* Use the conversation system to ask questions
-* Use the built in storage system to store and retrieve information
-  for a user.
-
-# RUN THE BOT:
-
-  Create a new app via the Slack Developer site:
-
-    -> http://api.slack.com
-
-  Get a Botkit Studio token from Botkit.ai:
-
-    -> https://studio.botkit.ai/
-
-  Run your bot from the command line:
-
-    clientId=<MY SLACK TOKEN> clientSecret=<my client secret> PORT=<3000> studio_token=<MY BOTKIT STUDIO TOKEN> node bot.js
-
-# USE THE BOT:
-
-    Navigate to the built-in login page:
-
-    https://<myhost.com>/login
-
-    This will authenticate you with Slack.
-
-    If successful, your bot will come online and greet you.
-
-
-# EXTEND THE BOT:
-
-  Botkit has many features for building cool and useful bots!
-
-  Read all about it here:
-
-    -> http://howdy.ai/botkit
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 var env = require('node-env-file');
 var rp = require('request-promise');
 env(__dirname + '/.env');
@@ -70,7 +18,7 @@ var keywords = require('./commons/keywords.js');
 var bot_options = {
     clientId: process.env.clientId,
     clientSecret: process.env.clientSecret,
-    debug: true,
+    // debug: true,
     scopes: ['bot'],
     // studio_token: process.env.studio_token,
     // studio_command_uri: process.env.studio_command_uri
@@ -159,45 +107,105 @@ if (!process.env.clientId || !process.env.clientSecret) {
                   convo.setVar('current_time', new Date());
               }
           }).catch(function(err) {
-              bot.reply(message, 'I experienced an error with a request to Botkit Studio: ' + err);
-              debug('Botkit Studio: ', err);
+              bot.reply(message, 'Well , I am not sure if I understand it correctly , try @moviebot help to know sample queries' +
+                ' or you could try @moviebot info name_of_movie ');
           });
       });
     controller.hears(greetingKeywords,['message_received','direct_mention', 'mention', 'direct_message'],function(bot,message){
-      console.log("I am here");
       bot.reply(message,message.text+' I am moviebot ,how can i help today? Type help to explore my skills');
     });
     controller.hears(keywords, ['message_received','direct_mention', 'mention', 'direct_message'], function (bot, message) {
       const movieName = message.text.match('(?<=info|movie|rating).*$')[0].trim();
       return rp('http://127.0.0.1:8000/api/movieDetails/' + movieName).then((msg) => {
         const jsonResponse = JSON.parse(msg);
-        return bot.reply(message, `${Message.createMessage(jsonResponse)}`);
+        return bot.reply(message, {
+          attachments:[
+            {
+              "text":`${Message.createMessage(jsonResponse)}`,
+              "username": "moviebot",
+              "mrkdwn": true
+            }
+          ]
+        });
 
       }).catch(() => {
         bot.reply(message,'Well this is embarassing, we are summoming the software gods');
       });
     });
+
     controller.hears(['help','onboard me'], ['message_received','direct_mention', 'mention', 'direct_message'], function(bot,message) {
-      // start a conversation to handle this response.
-      bot.startConversation(message,function(err,convo) {
-        convo.sayFirst(`Hello, i am moviebot &#128247;`);
-        convo.say({
-          text: 'I am ready to take your movie queries,Lets try some sample queries to get you warmed up',
-          quick_replies: [
+      bot.startConversation(message, function (err, convo) {
+
+        convo.ask({
+          attachments: [
             {
-              title: 'tell me about the movie Dilwale',
-              payload: 'movie dilwale',
-            },
-            {
-              title: 'give me info about Shawshank Redemption',
-              payload: 'info Shawshank Redemption',
-            },
-            {
-              title: 'what is the rating Shutter Island',
-              payload: 'rating Shutter Island',
+              title: 'Here are sample queries to begin with',
+              callback_id: '123',
+              attachment_type: 'default',
+              actions: [
+                {
+                  "name": "Shawshank Redemption",
+                  "text": "@moviebot movie Shawshank Redemption",
+                  "value": "movie",
+                  "type": "button",
+                },
+                {
+                  "name": "Antwone Fisher",
+                  "text": "@moviebot info Antwone Fisher",
+                  "value": "info",
+                  "type": "button",
+                }
+              ]
             }
           ]
-        });
+        }, [
+          {
+            pattern: "movie",
+            callback: function (reply, convo) {
+              return rp('http://127.0.0.1:8000/api/movieDetails/shawshank redemption').then((msg) => {
+                const jsonResponse = JSON.parse(msg);
+                bot.reply(message, {
+                  attachments:[
+                    {
+                      "text":`${Message.createMessage(jsonResponse)}`,
+                      "username": "moviebot",
+                      "mrkdwn": true
+                    }
+                  ]
+                });
+
+              }).catch(() => {
+                bot.reply(message,'Well this is embarassing, we are summoning the software gods');
+              });
+            }
+          },
+          {
+            pattern: "info",
+            callback: function () {
+              return rp('http://127.0.0.1:8000/api/movieDetails/Antwone Fisher').then((msg) => {
+                const jsonResponse = JSON.parse(msg);
+                bot.reply(message, {
+                  attachments:[
+                    {
+                      "text":`${Message.createMessage(jsonResponse)}`,
+                      "username": "moviebot",
+                      "mrkdwn": true
+                    }
+                  ]
+                });
+
+              }).catch(() => {
+                bot.reply(message,'Well this is embarassing, we are summoming the software gods');
+              });
+            }
+          },
+          {
+            default: true,
+            callback: function (reply, convo) {
+              // do nothing
+            }
+          }
+        ]);
       });
 
     });
